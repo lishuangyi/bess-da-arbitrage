@@ -1,4 +1,4 @@
-# Reinforcement Learning for Terminal SoC Valuation in Day-Ahead Battery Scheduling (DE-LU, 15-min)
+# Offline Reinforcement Learning and MILP for Day-Ahead Battery Arbitrage
 
 A day-ahead MILP plans one battery day at a time. It sees 24 hours and nothing after, so it cannot tell
 how much energy it should keep for tomorrow. Version 1 of this project showed that an end-to-end PPO policy
