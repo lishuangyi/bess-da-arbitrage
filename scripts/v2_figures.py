@@ -27,6 +27,9 @@ from bess.rlvalue.periods import add_v2_config_arg, v2_battery, v2_config, v2_di
 SURFACE, INK, INK2, GRID = "#fcfcfb", "#0b0b0b", "#52514e", "#e4e3df"
 COL = {"M1_learned_value": "#2a78d6", "B3_one_step_value": "#eb6834", "B4_rolling48h": "#eda100",
        "B0_fixed50": "#1baf7a", "B2_constant_value": "#6250d6", "M2_rl_end_level": "#e87ba4"}
+NAME = {"M1_learned_value": "MILP + FQI value", "B3_one_step_value": "one-step value (gamma = 0)",
+        "B4_rolling48h": "rolling 48 h MILP", "B0_fixed50": "fixed 50 % end", "B2_constant_value": "constant end value",
+        "M2_rl_end_level": "FQI picks the end level"}
 plt.rcParams.update({"figure.facecolor": SURFACE, "axes.facecolor": SURFACE, "axes.edgecolor": GRID,
                      "axes.labelcolor": INK2, "xtick.color": INK2, "ytick.color": INK2, "text.color": INK,
                      "axes.grid": True, "grid.color": GRID, "grid.linewidth": 0.8, "font.size": 10,
@@ -55,7 +58,7 @@ def value_curves(models_dir, feats: pl.DataFrame, period: tuple, out, prefix: st
     ax.axhline(0, color=INK2, lw=0.8)
     ax.set_xlabel("end-of-day state of charge (%)")
     ax.set_ylabel("learned value vs. ending at 50 % (EUR)")
-    ax.set_title(f"Learned value of stored energy, M1 (gamma = {m['choice']['gamma']}, seed 0)", loc="left")
+    ax.set_title(f"Learned value of stored energy, MILP + FQI value (gamma = {m['choice']['gamma']}, seed 0)", loc="left")
     ax.legend(fontsize=8.5)
     fig.tight_layout()
     fig.savefig(out / f"{prefix}_value_curves.png", dpi=150)
@@ -74,11 +77,11 @@ def cumulative_diff(res_dir, period: str, out, prefix: str) -> None:
         j = m1.select("day", pl.col("net_adj_eur").alias("a")).join(
             mean_over_seeds(seeded[b]).select("day", pl.col("net_adj_eur").alias("b")), on="day").sort("day")
         ax.plot(j["day"].to_list(), np.cumsum((j["a"] - j["b"]).to_numpy()), color=COL[b],
-                label=f"M1 - {b.split('_', 1)[0]} ({b.split('_', 1)[1].replace('_', ' ')})")
+                label=f"{NAME['M1_learned_value']} minus {NAME[b]}")
     ax.axhline(0, color=INK2, lw=0.8)
     ax.xaxis.set_major_formatter(mdates.DateFormatter("%b %y"))
     ax.set_ylabel("cumulative difference (EUR, incl. terminal valuation)")
-    ax.set_title(f"M1 against the baselines, {period} period (mean of seeds)", loc="left")
+    ax.set_title(f"MILP + FQI value against the baselines, {period} period (mean of seeds)", loc="left")
     ax.legend(fontsize=8.5)
     fig.tight_layout()
     fig.savefig(out / f"{prefix}_cumulative_diff_{period}.png", dpi=150)
