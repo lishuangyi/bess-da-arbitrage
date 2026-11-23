@@ -1,0 +1,13 @@
+# Battery of the ISEA Battery Revenue Index (2 h system), used by the v2 ISEA profile (configs/v2_isea.yaml).
+# Units: MW, MWh, EUR. Source: battery-charts.de methodology and the published wholesale code.
+p_max_mw: 1.0
+e_max_mwh: 2.0
+eta_ch: 0.95             # 95 % per direction -> 90.25 % round trip
+eta_dis: 0.95
+soc_min: 0.0
+soc_max: 1.0
+soc_init: 0.50
+soc_final: 0.50
+c_deg_eur_per_mwh: 0.0   # the index applies an ageing threshold whose value is not published; none here
+max_cycles_per_day: 2.0
+cycle_basis: stored_charge   # the index counts positive changes of the stored energy

@@ -1,0 +1,3 @@
+analysis,year,n_days,fixed_50,best_const,myopic,two_day,dp,best_const_end_soc,best_const_mode,dp_minus_best_const_eur_day,dp_minus_two_day_eur_day,myopic_minus_best_const_eur_day
+end_level,2024,366,47075.289,51301.029,51301.029,51498.934,51500.484,0.100,0.000,0.545,0.004,0.000
+end_level,2025,365,53782.705,58417.222,58408.901,58995.059,59063.745,0.100,0.000,1.771,0.188,-0.023

@@ -1,0 +1,23 @@
+{
+ "M1": {
+  "gamma": 0.95,
+  "trees": "et_leaf20",
+  "K": 30,
+  "val_net_adj_eur": 58084.89,
+  "val_net_eur": 58152.68,
+  "efc_per_day": 1.23,
+  "violations": 0
+ },
+ "B3": {
+  "gamma": 0.0,
+  "trees": "et_leaf20",
+  "K": 1,
+  "val_net_adj_eur": 57725.87,
+  "val_net_eur": 57691.97,
+  "efc_per_day": 1.21,
+  "violations": 0
+ },
+ "scale_eur_per_day": 154.7518068377965,
+ "selected_on": "validation, seed 0",
+ "B3_rule": "gamma = 0 with the tree setting chosen for M1"
+}

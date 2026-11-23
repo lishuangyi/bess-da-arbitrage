@@ -1,0 +1,40 @@
+# Published values of the ISEA Battery Revenue Index (ISEA, RWTH Aachen University, with enspired),
+# single-market day-ahead (DA) revenue in EUR per MW per year, used by scripts/compare_public_benchmarks.py
+# and the web page web/isea.html. Add new values here as ISEA publishes them; every value needs a source.
+#
+# The index dispatches on realised prices (no forecast): compare it with our perfect foresight under the
+# same battery assumptions. Our forecast-based methods show how much of the index a trader who commits at
+# gate closure (D-1 12:00) actually keeps.
+
+index:
+  name: ISEA Battery Revenue Index
+  by: ISEA, RWTH Aachen University, with enspired
+  dashboard: https://battery-charts.de/revenue-index/
+  methodology: https://battery-revenue-index-96345f.pages.rwth-aachen.de/methodology/single_markets/wholesale/
+  code: https://git.rwth-aachen.de/jonas.brucksch/battery_revenue_index
+
+# Battery assumptions stated on the dashboard and in the methodology. Start/end SoC and degradation
+# threshold of the published runs are not stated; we use 50 % at the start and end of every day and no
+# degradation cost.
+assumptions:
+  p_max_mw: 1.0
+  round_trip_efficiency: 0.9025      # 0.95 per direction
+  soc_min: 0.0
+  soc_max: 1.0
+  dispatch: greedy trade selection on realised daily spreads (not an exact optimum)
+  da_product: 60 min (ENTSO-E); resolution after the 15-min DA switch (2025-10-01) not stated
+
+# Annual DA values. system: storage duration in hours (1 MW with 1 or 2 MWh); cycles: daily cycle limit.
+annual:
+  - {year: 2025, system_h: 2, cycles: 2, eur_per_mw_a: 91000, quote: "fast 91.000 Euro",
+     source: "https://www.pv-magazine.de/2026/01/23/erloespotenziale-fuer-stationaere-batteriespeicher-in-deutschland-sind-2025-zurueckgegangen/"}
+  - {year: 2025, system_h: 1, cycles: 2, eur_per_mw_a: 47000, quote: "knapp 47.000 Euro",
+     source: "https://www.pv-magazine.de/2026/01/23/erloespotenziale-fuer-stationaere-batteriespeicher-in-deutschland-sind-2025-zurueckgegangen/"}
+  - {year: 2024, system_h: 1, cycles: 2, eur_per_mw_a: 38700, quote: "von rund 38.700 Euro",
+     source: "https://www.pv-magazine.de/2026/01/23/erloespotenziale-fuer-stationaere-batteriespeicher-in-deutschland-sind-2025-zurueckgegangen/"}
+  - {year: 2024, system_h: 2, cycles: 2, eur_per_mw_a: 77500, quote: "derived: 91.000 minus the stated rise of rund 13.500 Euro",
+     source: "https://www.pv-magazine.de/2026/01/23/erloespotenziale-fuer-stationaere-batteriespeicher-in-deutschland-sind-2025-zurueckgegangen/"}
+
+# Monthly annualised DA values from the dashboard ("Annualized Monthly Revenues", DA series), when
+# available: {month: "2026-01", system_h: 2, cycles: 2, eur_per_mw_a: ..., source: ...}
+monthly: []

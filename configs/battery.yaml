@@ -1,0 +1,10 @@
+# Battery model (v1). Units: MW, MWh, EUR.
+p_max_mw: 1.0            # symmetric charge/discharge power limit
+e_max_mwh: 2.0           # nominal energy capacity
+eta_ch: 0.9486832980505138   # sqrt(0.90)
+eta_dis: 0.9486832980505138  # sqrt(0.90) -> round-trip 90 %
+soc_min: 0.10            # fraction of e_max
+soc_max: 0.90
+soc_init: 0.50           # SoC at start of each delivery day
+soc_final: 0.50          # SoC required at end of each delivery day
+c_deg_eur_per_mwh: 10.0  # degradation cost per MWh discharged

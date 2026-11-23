@@ -1,0 +1,23 @@
+# v2: learned end-of-day SoC value (fitted Q iteration) for the 24 h MILP.
+# Dates are local delivery days (Europe/Berlin), inclusive. The market switched to 15-min
+# products on qh_market_start (configs/experiment.yaml); every day uses its native resolution.
+protocol: v2
+base_config: experiment.yaml       # data source, gate closure and publication times
+battery: battery.yaml              # project battery: SoC 10-90 % (9 levels), 10 EUR/MWh degradation
+forecaster: models/v2/xgb_forward_fold.pkl   # shared by all v2 profiles
+figure_prefix: v2
+freeze_date: "2026-11-22"          # date this plan took effect (files/BESS_V2_BRIEF.md)
+
+periods:
+  cache:      {start: "2020-01-01", end: latest}       # reward cache (days without a forecast model are skipped)
+  train:      {start: "2021-01-01", end: "2024-12-31"}  # FQI fitting (2020 has no earlier year for the forecaster)
+  validation: {start: "2025-01-01", end: "2025-12-31"}  # all hyper-parameters, incl. 92 days at 15 min
+  test:       {start: "2026-01-01", end: "2026-11-22"}  # retrospective: these days were already seen in v1
+  acceptance: {start: "2026-11-23", end: latest}        # delivery days after the freeze date
+
+cache:
+  n_procs: 6
+  dir: data/v2                     # regenerable, not committed
+
+results_dir: results/v2
+models_dir: models/v2

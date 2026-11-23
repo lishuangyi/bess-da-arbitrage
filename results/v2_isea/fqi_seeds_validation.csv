@@ -1,0 +1,10 @@
+method,seed,val_net_adj_eur
+M1_learned_value,0,83485.38
+M2_rl_end_level,0,82591.20
+M1_learned_value,1,83488.26
+M2_rl_end_level,1,82046.81
+M1_learned_value,2,83444.18
+M2_rl_end_level,2,82025.13
+B3_one_step_value,0,83302.71
+B3_one_step_value,1,83269.45
+B3_one_step_value,2,83226.88
