@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "bess-da-arbitrage"
-version = "0.1.0"
+version = "0.2.0"
 description = "Day-ahead BESS arbitrage in Germany (15-min): MILP with a terminal SoC value learned by fitted Q iteration"
 readme = "README.md"
 license = { text = "MIT" }
