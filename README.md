@@ -39,11 +39,12 @@ letting the end-of-day SoC float; the results do not support a gain from RL's mu
 
 ## Installation and quick start
 
-**Requirements.** [uv](https://docs.astral.sh/uv/getting-started/installation/) (it installs Python 3.12 itself if it
-is missing; developed and tested on Linux / WSL2, other platforms are untested). No external solver: the MILPs use
-HiGHS through `scipy.optimize.milp`. Internet access is needed only to download prices and the ISEA index. The reward cache uses several processes (6 by default; about 20
-minutes for 174k MILPs); everything else runs on one core. Disk: about 10 MB of prices (with raw downloads) and 4-5 MB
-per reward cache under `data/`.
+**Requirements.** Python 3.12, either through [uv](https://docs.astral.sh/uv/getting-started/installation/)
+(recommended: it installs Python 3.12 itself and the exact locked versions) or a plain Python 3.12 with pip. Developed
+and tested on Linux / WSL2; other platforms are untested. No external solver: the MILPs use HiGHS through
+`scipy.optimize.milp`. Internet access is needed only to download prices and the ISEA index. The reward cache uses
+several processes (6 by default; about 20 minutes for 174k MILPs); everything else runs on one core. Disk: about 10 MB
+of prices (with raw downloads) and 4-5 MB per reward cache under `data/`.
 
 **Dependencies** (minimum versions from `pyproject.toml`; "locked" = the exact versions in `uv.lock`, which `uv sync`
 installs and with which all tests pass)
@@ -64,24 +65,42 @@ installs and with which all tests pass)
 
 **Install**
 
+Get the code: `git clone https://github.com/lishuangyi/bess-da-arbitrage.git`, or download a version as zip or tar.gz
+from the [Releases](https://github.com/lishuangyi/bess-da-arbitrage/releases) page and unpack it. `bess` is the Python
+package in `src/bess/` (not a file in the top folder); `python -m bess` runs its `src/bess/__main__.py`. Both ways
+below install it in editable mode, so edits to the source take effect without reinstalling. Then follow **one** of
+the two ways.
+
+*With uv (recommended)*: the exact versions of `uv.lock`.
+
 ```bash
-git clone https://github.com/lishuangyi/bess-da-arbitrage.git && cd bess-da-arbitrage
+cd bess-da-arbitrage          # the cloned or unpacked folder
 uv sync                      # .venv with Python 3.12, the locked dependencies and the package itself
-source .venv/bin/activate    # optional: otherwise prefix every command below with `uv run`
-python -m bess               # lists every command
+uv run python -m bess        # lists every command
 make test                    # unit tests (synthetic data, no download needed)
 ```
 
-`bess` is the Python package in `src/bess/` (it is not a file in the top folder); `python -m bess` runs its
-`src/bess/__main__.py`. `uv sync` installs it into `.venv` in editable mode, so edits to the source take effect without
-reinstalling. All commands in this README assume that environment: activate it as above, or write
-`uv run python -m bess ...` (`make` does that by itself). Without uv, any Python 3.12 works too:
-`python3.12 -m venv .venv && .venv/bin/pip install -e .` (the versions are then not the locked ones).
+Run every `python -m bess ...` command of this README as `uv run python -m bess ...`, or activate the environment
+once with `source .venv/bin/activate` and type them as written. `make` targets work as they are (they call `uv run`).
 
-Instead of cloning you can download a version as zip or tar.gz from the
-[Releases](https://github.com/lishuangyi/bess-da-arbitrage/releases) page and run the same commands in the unpacked folder.
+*Without uv*: pip and a virtual environment; pip installs the newest versions allowed by `pyproject.toml`, not the
+locked ones.
+
+```bash
+cd bess-da-arbitrage          # the cloned or unpacked folder
+python3.12 -m venv .venv
+source .venv/bin/activate
+pip install -e .             # the dependencies and the package itself
+python -m bess               # lists every command
+make test PYTHON=python      # unit tests (synthetic data, no download needed)
+```
+
+With the environment activated, run the commands of this README as written; call `make` with `PYTHON=python`
+(the Makefile uses uv by default).
 
 **Quick start: reproduce the headline and forecast tomorrow**
+
+The commands assume the environment of your install way is active (see *Install*).
 
 ```bash
 python -m bess download                                    # DE-LU prices -> data/ (a few minutes)
@@ -91,7 +110,8 @@ python -m bess pipeline v2 --config v2_isea.yaml           # baselines, FQI sele
 python -m bess pipeline isea                               # ISEA reconciliation and the comparison figure
 ```
 
-The same with `make`: `make data`, `make v2-cache v2 V2_CONFIG=v2_isea.yaml`, `make isea`. Without `--config` (or
+The same with `make` (called as described in *Install*): `make data`, `make v2-cache v2 V2_CONFIG=v2_isea.yaml`,
+`make isea`. Without `--config` (or
 with `V2_CONFIG=v2.yaml`) the steps use the project battery. Results land in `results/v2_isea/` and `results/v2/`,
 figures in `results/figures/`; [Usage](#usage) lists every command, option and output file.
 
@@ -575,7 +595,7 @@ valuation, the quantity all tables use).
 
 ### Tests
 
-`make test` (or `uv run pytest`) runs the unit tests on synthetic data: no look-ahead (`test_no_lookahead.py`),
+`make test` (with uv) or `make test PYTHON=python` (without uv, environment activated) runs the unit tests on synthetic data: no look-ahead (`test_no_lookahead.py`),
 DST days (`test_dst.py`), MILP feasibility and optimality (`test_milp_feasibility.py`), reward cache, features and
 chained backtest (`test_rlvalue.py`), benchmark statistics (`test_benchmark.py`), CLI, market registry and multi-market
 interface (`test_cli_markets.py`), price gap filling (`test_price_fill.py`). Checks on real prices run once
