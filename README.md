@@ -58,28 +58,20 @@ per reward cache under `data/`.
 | requests | 2.31 | 2.34.2 | SMARD and Energy-Charts downloads (the ISEA index uses the standard library) |
 | matplotlib | 3.8 | 3.11.2 | figures |
 | tqdm | 4.66 | 4.70.1 | progress bars |
-| pytest (extra `dev`) | 8 | 9.2.0 | tests |
+| pytest | 8 | 9.2.0 | tests only |
 
 **Install**
 
 ```bash
 git clone https://github.com/lishuangyi/bess-da-arbitrage.git && cd bess-da-arbitrage
 conda create -n BESS python=3.12 -y && conda activate BESS     # or any Python 3.12 virtual environment
-pip install -e ".[dev]"                                       # installs the package and the `bess` command
+pip install -e . pytest                                       # the package, the `bess` command, and pytest for the tests
 python -m bess                                                # lists every command
 make test                                                     # unit tests (synthetic data, no download needed)
 ```
 
-`".[dev]"` is pip's syntax for "this directory (`.`) plus the optional dependency group `dev`" defined in
-`pyproject.toml` (`[project.optional-dependencies] dev = ["pytest>=8"]`); it is not a file or a separate package.
-`pip install -e .` without `[dev]` installs only what the code needs to run. `-e` (editable) links the installed
-package to the cloned source, so edits take effect without reinstalling.
-
-The package is installed from the cloned source; it is not on PyPI. Tagged versions are on the
-[Releases](https://github.com/lishuangyi/bess-da-arbitrage/releases) page: download the source archive of a release
-instead of cloning and install it the same way (`pip install -e ".[dev]"` inside the unpacked folder). An installed
-package needs the repository around it: `configs/` is read and `data/`, `models/` and `results/` are written relative
-to the repository root, so a wheel on its own would not run.
+Instead of cloning you can download a version as zip or tar.gz from the
+[Releases](https://github.com/lishuangyi/bess-da-arbitrage/releases) page and run the same commands in the unpacked folder.
 
 **Quick start: reproduce the headline and forecast tomorrow**
 
