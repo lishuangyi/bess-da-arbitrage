@@ -3,22 +3,33 @@ import datetime as dt
 
 import numpy as np
 import pytest
-
-from bess.data import calendar as cal
-from bess.forecast.naive import SeasonalNaive
-from bess.markets.day_ahead import DayAheadMarket
-from bess.optim.milp import ForecastMILP, TerminalValue, count_violations, schedule_objective, solve_schedule
-from bess.rlvalue import cache as cachemod
-from bess.rlvalue.cache import gate_closure_inputs, level_energy, mid_index, reward_tensor, soc_levels
-from bess.rlvalue.features import FEATURE_NAMES
-
 from test_no_lookahead import perturbed_from
+
+from bess.core import calendar as cal
+from bess.core.markets.day_ahead import DayAheadMarket
+from bess.forecasting.naive import SeasonalNaive
+from bess.milp.model import (
+    TerminalValue,
+    count_violations,
+    schedule_objective,
+    solve_schedule,
+)
+from bess.milp.policy import ForecastMILP
+from bess.rl.value import cache as cachemod
+from bess.rl.value.cache import (
+    gate_closure_inputs,
+    level_energy,
+    mid_index,
+    reward_tensor,
+    soc_levels,
+)
+from bess.rl.value.features import FEATURE_NAMES
 
 QH = dt.date(2025, 10, 1)
 
 
 def _isea_battery():
-    from bess.config import Battery
+    from bess.core.config import Battery
     return Battery.from_yaml("battery_isea.yaml")
 
 
@@ -46,7 +57,7 @@ def _inputs(mdata, days):
 
 
 def test_cache_matches_direct_solve_and_fixed_50_percent_equals_daily_milp(mdata, battery):
-    from bess.backtest.engine import run_backtest
+    from bess.output.backtest.engine import run_backtest
 
     days = [dt.date(2025, 7, 1), dt.date(2026, 1, 12)]
     inputs = _inputs(mdata, days)
@@ -93,8 +104,8 @@ def test_forward_fold_model_is_chosen_by_decision_day(mdata):
     """Synthetic data start in Feb 2025: only the 2026 fold has history. The forecast of D+1 = 1 Jan
     made at gate closure of D = 31 Dec would need the 2025 model, so that day has no inputs; from
     D = 1 Jan 2026 on both horizons use the 2026 model, which never saw 2026 prices."""
-    from bess.forecast import xgb as xgbmod
-    from bess.rlvalue.forecasts import ForwardFoldXGB
+    from bess.forecasting import xgb as xgbmod
+    from bess.forecasting.forward_fold import ForwardFoldXGB
 
     old = dict(xgbmod.XGB_PARAMS)
     xgbmod.XGB_PARAMS.update(n_estimators=20, early_stopping_rounds=5)
@@ -115,8 +126,8 @@ def test_forward_fold_model_is_chosen_by_decision_day(mdata):
 
 
 def test_chain_carries_soc_restarts_at_gaps_and_values_the_end(mdata, battery):
-    from bess.backtest.chain import run_chain
-    from bess.rlvalue.policy import LinearResidualMILP
+    from bess.output.backtest.chain import run_chain
+    from bess.rl.value.policy import LinearResidualMILP
 
     days = [dt.date(2026, 1, d) for d in (10, 11, 12, 14, 15)]           # gap: 13 Jan
     days_res = [(d, "quarterhour") for d in days]
@@ -151,7 +162,13 @@ def test_level_terminal_value_picks_best_level(battery):
 def test_fqi_matches_tabular_value_iteration():
     """Constant features and the same reward every day: FQI must reproduce tabular value iteration
     Q = R + gamma * max_a Q(e, a) on the 9 x 9 levels, and gamma = 0 must return R."""
-    from bess.rlvalue.fqi import FQIData, continuation_values, fit_fqi, fit_projection, q_inputs
+    from bess.rl.value.fqi import (
+        FQIData,
+        continuation_values,
+        fit_fqi,
+        fit_projection,
+        q_inputs,
+    )
 
     rng = np.random.default_rng(0)
     n, gamma, K = 40, 0.8, 25

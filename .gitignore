@@ -1,12 +1,7 @@
-# data (SMARD raw/cache is not redistributed; use scripts/download_data.py)
+# data (SMARD raw/cache is not redistributed; use `python -m bess download`)
 /data/
 # results: only the aggregated CSVs cited in the README and the figures are committed
 results/*
-!results/summary.csv
-!results/benchmark_*.csv
-!results/ppo_throughput.csv
-!results/forecast_metrics.csv
-!results/benchmark_protocols_test.csv
 !results/public_benchmarks/
 results/public_benchmarks/*
 !results/public_benchmarks/comparison.csv
@@ -38,14 +33,9 @@ results/v3_at/*/*/daily/
 results/v3/*/*/daily/
 !results/v2_long10/
 results/v2_long10/*/daily/
-!results/protocols/
-results/protocols/*/*
-!results/protocols/*/summary.csv
-!results/protocols/*/benchmark_*.csv
-!results/protocols/*/forecast_metrics.csv
 !results/figures/
 results/figures/*
-!results/figures/*.png
+!results/figures/v2*.png
 /models/
 /logs/
 __pycache__/

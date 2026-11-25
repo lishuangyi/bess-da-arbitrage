@@ -1,0 +1,37 @@
+# Market registry. Experiment configs name a market with `market: <id>`; `python -m bess markets` lists them.
+# Dates are local delivery days. Prices are cached in <cache_dir>/prices_{hour,quarterhour}.parquet.
+#
+# To add a market: add an entry here. A provider that is not implemented yet (source kind `entsoe`) is declared in
+# bess/input/sources/ and fails loudly until its fetch() exists. Supported today: timezone Europe/Berlin (all CET
+# zones of the coupled day-ahead auction) and German holiday features; anything else raises NotImplementedError.
+markets:
+  de_lu:
+    name: Germany-Luxembourg day-ahead (SDAC)
+    product: day_ahead
+    source: {kind: smard, base_url: "https://www.smard.de/app/chart_data", filter_id: 4169, region: DE-LU}
+    timezone: Europe/Berlin
+    gate_closure_local: "12:00"     # on D-1
+    publication_local: "13:00"      # conservative publication time of D's prices, on D-1
+    qh_market_start: "2025-10-01"   # first delivery day with a native 15-min day-ahead auction
+    download_start: "2019-12-01"    # extra month so that D-7 lags exist for 2020-01-01
+    cache_dir: data
+    holidays: DE
+    # Periods SMARD leaves empty (e.g. delivery days 2026-11-20/21) or has not published yet are taken from Energy-Charts
+    # (Fraunhofer ISE, CC BY 4.0, data from Bundesnetzagentur | SMARD.de), only after both sources agree on the
+    # overlapping days; every filled day is listed in the data report.
+    fallback: {kind: energy_charts, bzn: DE-LU}
+    notes: SMARD filter 4169 verified against the SMARD index on 2026-11-21.
+
+  at:
+    name: Austria day-ahead (SDAC)
+    product: day_ahead
+    # SMARD publishes the Austrian price ("Grosshandelspreise", neighbouring zone) as filter 4170 under region DE-LU.
+    source: {kind: smard, base_url: "https://www.smard.de/app/chart_data", filter_id: 4170, region: DE-LU}
+    timezone: Europe/Berlin
+    gate_closure_local: "12:00"
+    publication_local: "13:00"
+    qh_market_start: "2025-10-01"
+    download_start: "2019-12-01"
+    cache_dir: data/at
+    holidays: DE                    # the v3 replication kept the German holiday features on purpose
+    notes: Austrian day-ahead price as published by SMARD; used for an out-of-zone replication.

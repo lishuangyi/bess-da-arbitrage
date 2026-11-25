@@ -1,0 +1,23 @@
+# Austrian bidding zone (SMARD filter 4170), used only for the v3 out-of-zone replication; otherwise identical to
+# configs/experiment.yaml.
+# Fixed experiment configuration. Dates are local delivery days (Europe/Berlin), inclusive.
+# Protocol "brief": the split fixed in the project brief.
+protocol: brief_at
+market: at                # configs/markets.yaml: price source, timezone, gate closure, publication time
+models_dir: models/at
+
+splits:
+  train:      {start: "2020-01-01", end: "2024-12-31", resolution: hour}
+  validation: {start: "2025-01-01", end: "2025-09-30", resolution: hour}
+  adaptation: {start: "2025-10-01", end: "2025-12-31", resolution: quarterhour}
+  test:       {start: "2026-01-01", end: latest,       resolution: quarterhour}
+
+backtest:
+  results_dir: results/at
+
+rolling:
+  horizon_days: 2
+
+ppo:
+  n_envs: 8
+  seed: 0

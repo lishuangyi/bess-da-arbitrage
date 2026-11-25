@@ -4,7 +4,7 @@ import datetime as dt
 import numpy as np
 import polars as pl
 
-from bess.backtest.benchmark import block_bootstrap_means, run_benchmark
+from bess.output.benchmark import block_bootstrap_means, run_benchmark
 
 
 def _daily(net, viol=0):
@@ -45,7 +45,7 @@ def test_seeded_result_files_are_kept_apart_and_averaged(tmp_path):
 
     import polars as pl
 
-    from bess.backtest.io import load_daily_dir, load_daily_seeds
+    from bess.output.io import load_daily_dir, load_daily_seeds
 
     days = [dt.date(2026, 1, 1), dt.date(2026, 1, 2)]
     base = {"day": days, "n_steps": [96, 96], "efc": [1.0, 1.0], "compute_time_s": [0.1, 0.1]}
@@ -62,7 +62,7 @@ def test_seeded_result_files_are_kept_apart_and_averaged(tmp_path):
 def test_block_bootstrap_ratio_pairs_days():
     import numpy as np
 
-    from bess.backtest.benchmark import block_bootstrap_ratio
+    from bess.output.benchmark import block_bootstrap_ratio
 
     rng = np.random.default_rng(1)
     den = rng.uniform(50, 150, 200)

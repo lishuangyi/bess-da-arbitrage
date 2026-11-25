@@ -4,10 +4,10 @@ import datetime as dt
 import numpy as np
 import pytest
 
-from bess.config import REPO_ROOT, experiment_config
-from bess.data import calendar as cal
-from bess.data.smard import PriceSeries, load_market_data
-from bess.forecast.base import profile_on_grid
+from bess.core import calendar as cal
+from bess.core.config import REPO_ROOT, experiment_config
+from bess.forecasting.base import profile_on_grid
+from bess.input.prices import PriceSeries, load_market_data
 
 SPRING = ["2020-03-29", "2021-03-28", "2022-03-27", "2023-03-26", "2024-03-31", "2025-03-30", "2026-03-29"]
 AUTUMN = ["2020-10-25", "2021-10-31", "2022-10-30", "2023-10-29", "2024-10-27", "2025-10-26", "2026-10-25"]

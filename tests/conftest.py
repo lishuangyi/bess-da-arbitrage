@@ -1,9 +1,9 @@
 import numpy as np
 import pytest
 
-from bess.config import Battery
-from bess.data import calendar as cal
-from bess.data.smard import MarketData, PriceSeries
+from bess.core import calendar as cal
+from bess.core.config import Battery
+from bess.input.prices import MarketData, PriceSeries
 
 
 def synthetic_market_data(start="2025-02-01", end="2026-01-20", qh_start="2025-10-01", seed=0) -> MarketData:

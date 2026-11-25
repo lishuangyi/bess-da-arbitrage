@@ -1,26 +1,14 @@
 # Fixed experiment configuration. Dates are local delivery days (Europe/Berlin), inclusive.
 # Protocol "brief": the split fixed in the project brief.
 protocol: brief
-timezone: Europe/Berlin
+market: de_lu                # configs/markets.yaml: price source, timezone, gate closure, publication time
 models_dir: models
-
-data:
-  smard_base_url: https://www.smard.de/app/chart_data
-  filter_id: 4169          # day-ahead price, verified against the SMARD index (2026-11-21)
-  region: DE-LU
-  download_start: "2019-12-01"   # extra month so that D-7 lags exist for 2020-01-01
-  qh_market_start: "2025-10-01"  # first delivery day with a native 15-min day-ahead auction
-  cache_dir: data
 
 splits:
   train:      {start: "2020-01-01", end: "2024-12-31", resolution: hour}
   validation: {start: "2025-01-01", end: "2025-09-30", resolution: hour}
   adaptation: {start: "2025-10-01", end: "2025-12-31", resolution: quarterhour}
   test:       {start: "2026-01-01", end: latest,       resolution: quarterhour}
-
-day_ahead:
-  gate_closure_local: "12:00"    # on D-1
-  publication_local: "13:00"     # conservative publication time of D results, on D-1
 
 backtest:
   results_dir: results

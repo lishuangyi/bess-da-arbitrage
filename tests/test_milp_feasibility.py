@@ -2,8 +2,13 @@
 import numpy as np
 import pytest
 
-from bess.markets.base import Schedule
-from bess.optim.milp import count_violations, energy_trajectory, schedule_objective, solve_schedule
+from bess.core.contracts import Schedule
+from bess.milp.model import (
+    count_violations,
+    energy_trajectory,
+    schedule_objective,
+    solve_schedule,
+)
 
 
 @pytest.mark.parametrize("dt_h,n", [(1.0, 24), (1.0, 23), (1.0, 25), (0.25, 96), (0.25, 92), (0.25, 100)])
@@ -97,8 +102,8 @@ def test_cycle_limit_on_stored_charge():
     """ISEA convention: the cap counts energy added to the store (eta_ch * p_ch * dt)."""
     import dataclasses
 
-    from bess.config import Battery
-    from bess.optim.milp import cycle_throughput_mwh
+    from bess.core.config import Battery
+    from bess.milp.model import cycle_throughput_mwh
 
     b = Battery(p_max_mw=1.0, e_max_mwh=2.0, eta_ch=0.95, eta_dis=0.95, soc_min=0.0, soc_max=1.0,
                 c_deg_eur_per_mwh=0.0, max_cycles_per_day=1.0, cycle_basis="stored_charge")

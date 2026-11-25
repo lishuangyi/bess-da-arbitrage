@@ -4,14 +4,15 @@ import datetime as dt
 import numpy as np
 import pytest
 
-from bess.backtest.engine import run_backtest
-from bess.backtest.policy import Plan, Policy
-from bess.data import calendar as cal
-from bess.data.smard import MarketData, PriceSeries
-from bess.forecast.base import check_information
-from bess.forecast.naive import SeasonalNaive
-from bess.markets.day_ahead import DayAheadMarket
-from bess.optim.milp import ForecastMILP, PerfectForesight, solve_schedule
+from bess.core import calendar as cal
+from bess.core.contracts import Plan, Policy
+from bess.core.markets.day_ahead import DayAheadMarket
+from bess.forecasting.base import check_information
+from bess.forecasting.naive import SeasonalNaive
+from bess.input.prices import MarketData, PriceSeries
+from bess.milp.model import solve_schedule
+from bess.milp.policy import ForecastMILP, PerfectForesight
+from bess.output.backtest.engine import run_backtest
 
 DAYS = [dt.date(2025, 3, 30), dt.date(2025, 7, 1), dt.date(2025, 10, 26), dt.date(2026, 1, 5)]
 
@@ -108,8 +109,8 @@ def test_oracle_only_for_perfect_foresight(mdata, battery):
 
 @pytest.fixture(scope="module")
 def small_xgb(mdata):
-    from bess.forecast import xgb as xgbmod
-    from bess.forecast.xgb import XGBForecaster
+    from bess.forecasting import xgb as xgbmod
+    from bess.forecasting.xgb import XGBForecaster
 
     old = dict(xgbmod.XGB_PARAMS)
     xgbmod.XGB_PARAMS.update(n_estimators=30, early_stopping_rounds=5)
@@ -139,7 +140,7 @@ def test_xgb_forecast_invariant_to_future(mdata, small_xgb, day):
 def test_xgb_training_does_not_use_days_after_train_end(mdata):
     """Changing prices after the training window must not change the fitted model's
     training data (validation is used for early stopping only)."""
-    from bess.forecast.xgb import dataset
+    from bess.forecasting.xgb import dataset
 
     train = cal.daterange("2025-03-01", "2025-04-30")
     cut = cal.day_end_utc(max(train))
@@ -149,7 +150,7 @@ def test_xgb_training_does_not_use_days_after_train_end(mdata):
 
 
 def test_rolling_schedule_invariant_to_realised_prices(mdata, battery, small_xgb):
-    from bess.optim.rolling import RollingMILP
+    from bess.milp.rolling import RollingMILP
 
     days = [dt.date(2026, 1, 10), dt.date(2026, 1, 11)]
     pol = RollingMILP(small_xgb)
@@ -165,7 +166,7 @@ def test_rolling_schedule_invariant_to_realised_prices(mdata, battery, small_xgb
 
 def test_days_with_missing_gate_closure_inputs_are_excluded(mdata):
     """A day whose D-1 prices are missing is excluded for all methods (no interpolation)."""
-    from bess.backtest.periods import period_days
+    from bess.input.periods import period_days
 
     gap = dt.date(2026, 1, 9)
     out = []
@@ -184,7 +185,7 @@ def test_days_with_missing_gate_closure_inputs_are_excluded(mdata):
 
 def test_multi_segment_split(mdata):
     """A training split made of an hourly and a 15-min segment; single-segment access is refused."""
-    from bess.backtest.periods import all_split_days, period_days, split_segments
+    from bess.input.periods import all_split_days, period_days, split_segments
 
     cfg = {"splits": {"train": [{"start": "2025-08-01", "end": "2025-09-30", "resolution": "hour"},
                                 {"start": "2025-10-01", "end": "2025-11-30", "resolution": "quarterhour"}],
@@ -206,7 +207,7 @@ def test_forward_fold_forecasts_use_only_earlier_years(mdata):
     """A day of year y is forecast by a model fitted on earlier years only; lags stay <= T-1.
     Perturbing prices from day X on must leave every forecast for days <= X unchanged, and the
     first year (no earlier history) gets no forecasts."""
-    from bess.forecast import xgb as xgbmod
+    from bess.forecasting import xgb as xgbmod
 
     old = dict(xgbmod.XGB_PARAMS)
     xgbmod.XGB_PARAMS.update(n_estimators=30, early_stopping_rounds=5)
