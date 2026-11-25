@@ -39,17 +39,19 @@ letting the end-of-day SoC float; the results do not support a gain from RL's mu
 
 ## Installation and quick start
 
-**Requirements.** Python 3.12 (developed and tested on Linux / WSL2 with conda; other platforms are untested). No external solver: the MILPs use HiGHS through `scipy.optimize.milp`. Internet access is
-needed only to download prices and the ISEA index. The reward cache uses several processes (6 by default; about 20
+**Requirements.** [uv](https://docs.astral.sh/uv/getting-started/installation/) (it installs Python 3.12 itself if it
+is missing; developed and tested on Linux / WSL2, other platforms are untested). No external solver: the MILPs use
+HiGHS through `scipy.optimize.milp`. Internet access is needed only to download prices and the ISEA index. The reward cache uses several processes (6 by default; about 20
 minutes for 174k MILPs); everything else runs on one core. Disk: about 10 MB of prices (with raw downloads) and 4-5 MB
 per reward cache under `data/`.
 
-**Dependencies** (minimum versions from `pyproject.toml`; "tested" = the development environment, in which all tests pass)
+**Dependencies** (minimum versions from `pyproject.toml`; "locked" = the exact versions in `uv.lock`, which `uv sync`
+installs and with which all tests pass)
 
-| Package | Minimum | Tested | Used for |
+| Package | Minimum | Locked | Used for |
 |:--|:--|:--|:--|
 | numpy | 1.26 | 2.5.5 | arrays, schedules |
-| polars | 1.0 | 2.1.0 | tables, parquet and CSV I/O (no pandas anywhere) |
+| polars | 1.0 | 2.2.0 | tables, parquet and CSV I/O (no pandas anywhere) |
 | scipy | 1.12 | 1.18.1 | MILP solver (HiGHS via `scipy.optimize.milp`), sparse matrices |
 | xgboost | 2.0 | 3.4.1 | price forecasters |
 | scikit-learn | 1.4 | 1.9.1 | fitted Q iteration (ExtraTrees), value projection |
@@ -64,16 +66,17 @@ per reward cache under `data/`.
 
 ```bash
 git clone https://github.com/lishuangyi/bess-da-arbitrage.git && cd bess-da-arbitrage
-conda create -n BESS python=3.12 -y && conda activate BESS     # or any Python 3.12 virtual environment
-pip install -e . pytest                                       # the package, the `bess` command, and pytest for the tests
-python -m bess                                                # lists every command
-make test                                                     # unit tests (synthetic data, no download needed)
+uv sync                      # .venv with Python 3.12, the locked dependencies and the package itself
+source .venv/bin/activate    # optional: otherwise prefix every command below with `uv run`
+python -m bess               # lists every command
+make test                    # unit tests (synthetic data, no download needed)
 ```
 
 `bess` is the Python package in `src/bess/` (it is not a file in the top folder); `python -m bess` runs its
-`src/bess/__main__.py`. Install it once with `pip install -e .` from the top folder, after that `python -m bess` and
-`bess` work from any folder and pick up edits to the source. Without installing, run it from the top folder as
-`PYTHONPATH=src python -m bess`.
+`src/bess/__main__.py`. `uv sync` installs it into `.venv` in editable mode, so edits to the source take effect without
+reinstalling. All commands in this README assume that environment: activate it as above, or write
+`uv run python -m bess ...` (`make` does that by itself). Without uv, any Python 3.12 works too:
+`python3.12 -m venv .venv && .venv/bin/pip install -e .` (the versions are then not the locked ones).
 
 Instead of cloning you can download a version as zip or tar.gz from the
 [Releases](https://github.com/lishuangyi/bess-da-arbitrage/releases) page and run the same commands in the unpacked folder.
@@ -572,7 +575,7 @@ valuation, the quantity all tables use).
 
 ### Tests
 
-`make test` (or `python -m pytest`) runs the unit tests on synthetic data: no look-ahead (`test_no_lookahead.py`),
+`make test` (or `uv run pytest`) runs the unit tests on synthetic data: no look-ahead (`test_no_lookahead.py`),
 DST days (`test_dst.py`), MILP feasibility and optimality (`test_milp_feasibility.py`), reward cache, features and
 chained backtest (`test_rlvalue.py`), benchmark statistics (`test_benchmark.py`), CLI, market registry and multi-market
 interface (`test_cli_markets.py`), price gap filling (`test_price_fill.py`). Checks on real prices run once

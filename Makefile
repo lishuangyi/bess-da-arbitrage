@@ -1,6 +1,7 @@
 # One-command reproduction. Every recipe goes through the unified CLI `python -m bess` (bess/cli.py);
-# `python -m bess` alone lists all commands. PYTHON defaults to the active interpreter.
-PYTHON ?= python
+# `python -m bess` alone lists all commands. PYTHON runs in the uv environment (.venv, created by `uv sync`);
+# override with `make PYTHON=python ...` to use the active interpreter instead.
+PYTHON ?= uv run python
 BESS = $(PYTHON) -m bess
 
 .PHONY: test data v2-cache v2 isea isea-fetch
