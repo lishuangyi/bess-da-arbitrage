@@ -70,6 +70,11 @@ python -m bess                                                # lists every comm
 make test                                                     # unit tests (synthetic data, no download needed)
 ```
 
+`bess` is the Python package in `src/bess/` (it is not a file in the top folder); `python -m bess` runs its
+`src/bess/__main__.py`. Install it once with `pip install -e .` from the top folder, after that `python -m bess` and
+`bess` work from any folder and pick up edits to the source. Without installing, run it from the top folder as
+`PYTHONPATH=src python -m bess`.
+
 Instead of cloning you can download a version as zip or tar.gz from the
 [Releases](https://github.com/lishuangyi/bess-da-arbitrage/releases) page and run the same commands in the unpacked folder.
 
