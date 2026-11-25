@@ -1,6 +1,6 @@
-"""Frequency Containment Reserve (FCR) market - interface only (v1).
+"""Frequency Containment Reserve (FCR) market - interface only, not used by any pipeline yet.
 
-TODO (v2), verify every rule against regelleistung.net before implementing:
+TODO: verify every rule against regelleistung.net before implementing:
 - auction on D-1 in the morning (before DA gate closure), so FCR must be decided
   before the DA bid and its SoC/power occupancy enters the DA problem;
 - products are 4-hour blocks (6 per day), symmetric (same MW up and down);

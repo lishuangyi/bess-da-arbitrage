@@ -31,6 +31,59 @@ and it is slightly but significantly below a free end of day with no value** (-0
 project battery the picture is the same (minus the one-step value: +0.2 EUR/day [-0.5, 0.9]). The gain over the fixed 50 % end comes from
 letting the end-of-day SoC float; the results do not support a gain from RL's multi-step bootstrapping.
 
+**Contents**: [Installation and quick start](#installation-and-quick-start) ·
+[Problem setting](#problem-setting-and-timing-rules) · [Method](#method) · [Results](#results) ·
+[External reference: ISEA](#external-reference-isea-battery-revenue-index) · [Limitations](#limitations) ·
+[Usage](#usage): [commands](#commands), [configuration](#configuration), [file structure](#file-structure),
+[data, models and results](#data-models-and-results), [tests](#tests) · [Data and licence](#data-and-licence)
+
+## Installation and quick start
+
+**Requirements.** Python 3.12 (developed and tested on Linux / WSL2 with conda; other platforms are untested). No external solver: the MILPs use HiGHS through `scipy.optimize.milp`. Internet access is
+needed only to download prices and the ISEA index. The reward cache uses several processes (6 by default; about 20
+minutes for 174k MILPs); everything else runs on one core. Disk: about 10 MB of prices (with raw downloads) and 4-5 MB
+per reward cache under `data/`.
+
+**Dependencies** (minimum versions from `pyproject.toml`; "tested" = the development environment, in which all tests pass)
+
+| Package | Minimum | Tested | Used for |
+|:--|:--|:--|:--|
+| numpy | 1.26 | 2.5.5 | arrays, schedules |
+| polars | 1.0 | 2.1.0 | tables, parquet and CSV I/O (no pandas anywhere) |
+| scipy | 1.12 | 1.18.1 | MILP solver (HiGHS via `scipy.optimize.milp`), sparse matrices |
+| xgboost | 2.0 | 3.4.1 | price forecasters |
+| scikit-learn | 1.4 | 1.9.1 | fitted Q iteration (ExtraTrees), value projection |
+| holidays | 0.50 | 0.109 | German public holidays (forecast and state features) |
+| pyyaml | 6 | 6.0.4 | configuration files |
+| requests | 2.31 | 2.34.2 | SMARD and Energy-Charts downloads (the ISEA index uses the standard library) |
+| matplotlib | 3.8 | 3.11.2 | figures |
+| tqdm | 4.66 | 4.70.1 | progress bars |
+| pytest (extra `dev`) | 8 | 9.2.0 | tests |
+
+**Install**
+
+```bash
+git clone https://github.com/lishuangyi/bess-da-arbitrage.git && cd bess-da-arbitrage
+conda create -n BESS python=3.12 -y && conda activate BESS     # or any Python 3.12 virtual environment
+pip install -e ".[dev]"                                       # installs the package and the `bess` command
+python -m bess                                                # lists every command
+make test                                                     # unit tests (synthetic data, no download needed)
+```
+
+**Quick start: reproduce the headline and forecast tomorrow**
+
+```bash
+python -m bess download                                    # DE-LU prices -> data/ (a few minutes)
+python -m bess cache reward --config v2_isea.yaml          # forward-fold XGB + reward cache (about 20 min, 6 processes)
+python -m bess forecast --config v2_isea.yaml              # gate-closure forecast of the next delivery day
+python -m bess pipeline v2 --config v2_isea.yaml           # baselines, FQI selection, test, tables, figures
+python -m bess pipeline isea                               # ISEA reconciliation and the comparison figure
+```
+
+The same with `make`: `make data`, `make v2-cache v2 V2_CONFIG=v2_isea.yaml`, `make isea`. Without `--config` (or
+with `V2_CONFIG=v2.yaml`) the steps use the project battery. Results land in `results/v2_isea/` and `results/v2/`,
+figures in `results/figures/`; [Usage](#usage) lists every command, option and output file.
+
 ## Problem setting and timing rules
 
 <picture>
@@ -359,41 +412,76 @@ previous-day baseline 10,984 vs 10,904) when prices are hourly.
 conditioned on the gate-closure forecast; multi-step FQI bootstrapping instead of dynamic-programming labels; paired
 comparison with the rolling MILP and with the one-step value in the same backtester.
 
-## Code layout and commands
+## Usage
 
-One entry point drives everything: `python -m bess <command>` (also installed as the `bess` console script;
-`python -m bess` lists all commands, `python -m bess <command> --help` their options). The code follows the five
-modules of the scheme above, on top of a small shared kernel; the library code of each module imports only from the
-rows above it (the FQI training command also uses the backtester of `output` to select its settings).
+### Commands
 
-| Module | Contents | Commands |
-|:--|:--|:--|
-| `bess.core` | configuration, delivery-day calendar (Europe/Berlin), shared contracts (`Policy`, `Plan`, `Schedule`, `DayContext`), market rules (`Market`, `DayAheadMarket`, FCR sketch) | - |
-| `bess.input` | market registry (`configs/markets.yaml`), price sources (SMARD, Energy-Charts fallback; ENTSO-E declared), cached price series, gate-closure information sets, evaluable delivery days per period, ISEA index download | `download`, `markets`, `isea fetch` |
-| `bess.forecasting` | seasonal naive, XGBoost, forward-chaining XGBoost, training and prediction, multi-market interface | `forecast`, `train xgb` |
-| `bess.rl` | `value/`: reward cache, fitted Q iteration, learned-value policies | `cache reward`, `train fqi` |
-| `bess.milp` | battery scheduling MILP (HiGHS) with terminal values and cycle limits, daily and rolling MILP policies | (used by the backtests) |
-| `bess.output` | chained backtester, metrics, block-bootstrap benchmark, summaries, ISEA comparison, figures | `backtest chain`, `benchmark v2\|public\|headroom`, `figures v2\|isea` |
+One entry point drives everything: `python -m bess <command> [<sub-command>] [options]`, also installed as the
+`bess` console script. `python -m bess` lists the commands, `python -m bess <command> [<sub-command>] --help` their
+options. `--config` names a file in `configs/`: an experiment config (`experiment*.yaml`) or a battery profile
+(`v2.yaml` = project battery, `v2_isea.yaml` = ISEA index battery). Paths below are written for the profile
+`v2_isea.yaml`; with `v2.yaml` replace `v2_isea` by `v2`.
 
-Named workflows chain the commands in the order of the Makefile targets: `python -m bess pipeline <name>`
-(`--config v2_isea.yaml` for the ISEA battery, `--dry-run` to list the steps). Examples:
+| Command | What it does | Main options | Writes |
+|:--|:--|:--|:--|
+| `download` | day-ahead prices of a market (hour + 15 min), gaps filled from the fallback source after an overlap check | `--market de_lu\|at`, `--config`, `--no-fallback`, `--cache-dir` | `data/prices_hour.parquet`, `data/prices_quarterhour.parquet`, raw chunks in `data/raw/`, `results/data_report.json` |
+| `markets` | list the declared markets, their source and whether their cache exists | - | - |
+| `isea fetch` | ISEA Battery Revenue Index values from the public dashboard | `--daily`, `--months`, `--out` | `configs/isea_monthly.csv` or (`--daily`) `configs/isea_daily.csv` |
+| `forecast` | gate-closure forecast of one delivery day; with realised prices and MAE / RMSE for a past day | `--config`, `--day YYYY-MM-DD` (default: next day), `--model`, `--out` | `results/forecasts/<market>_<day>.csv` |
+| `train xgb` | fit the forecasters: `forward-fold` (one model per year, only earlier days) or `single` (one model on the train split) | `--kind`, `--config`, `--out` | `models/v2/xgb_forward_fold.pkl` or `models/xgb.pkl` |
+| `cache reward` | forward-fold forecasts (fitted if missing) and all (start, end) SoC MILPs per day, settled at realised prices | `--config`, `--n-procs`, `--smoke` (one quarter), `--refit-forecaster` | `data/v2_isea/reward_cache.parquet`, `features.parquet`, `days.json` |
+| `train fqi` | fitted Q iteration: grid on validation, 3 seeds, refit for the test | `--config`, `--quick` (small grid), `--only-b3` | `models/v2_isea/fqi_*_seed<k>.pkl`; `results/v2_isea/fqi_grid.csv`, `fqi_choice.json`, `fqi_convergence.csv`, `fqi_scale.json`, `fqi_seeds_validation.csv`, validation daily files |
+| `backtest chain` | chained backtest of the chosen methods (see codes below) on a period | `--config`, `--period validation\|test\|acceptance`, `--methods`, `--b2-grid` | `results/v2_isea/daily/V2__<method>__<period>[__seed<k>].csv`; on validation `b2_grid.csv`, `b2_choice.json` |
+| `benchmark v2` | summary table, paired daily differences with block-bootstrap intervals, share of the ISEA index | `--config`, `--period` | `results/v2_isea/summary_<period>.csv`, `paired_<period>.csv`, `isea_share_<period>.csv` |
+| `benchmark public` | perfect foresight and forecast-based MILPs under the ISEA index and Electricity Maps assumptions, matched month by month and day by day; the XGB rows need `models/xgb.pkl` (`train xgb --kind single`) | `--cases isea,emaps`, `--out`, `--rescore` | `results/public_benchmarks/*.csv` |
+| `benchmark headroom` | hindsight headroom of end-of-day policies from the reward caches | `--hurdle-menu` | `results/v2_isea/headroom.csv`, `results/v2/headroom.csv` |
+| `figures v2` | learned value curves, cumulative differences, FQI convergence, ISEA comparison | `--config`, `--period` | `results/figures/v2_isea_*.png` |
+| `figures isea` | the ISEA comparison figure only | `--config` | `results/figures/v2_isea_vs_isea_index.png` |
+| `pipeline <name>` | named workflow, steps in the order below | `--config`, `--dry-run` | the files of its steps |
 
-```bash
-python -m bess download --market de_lu                         # prices of one market
-python -m bess forecast --config v2_isea.yaml                  # gate-closure forecast of the next delivery day
-python -m bess forecast --config v2_isea.yaml --day 2026-11-23 # ... of a past day, with its realised error
-python -m bess train fqi --config v2_isea.yaml                 # learned end-of-day value
-python -m bess backtest chain --config v2_isea.yaml --period test --methods pf,b0,b1,b2,b4,b3,m1,m2
-python -m bess benchmark v2 --config v2_isea.yaml --period test
-```
+**Pipelines.** `data`: `download`. `v2`: `backtest chain --period validation --methods pf,b0,b1,b2,b4`, `train fqi`,
+`benchmark v2 --period validation`, `backtest chain --period test --methods pf,b0,b1,b2,b4,b3,m1,m2`,
+`benchmark v2 --period test`, `figures v2 --period test`. `isea`: `benchmark public`, `figures isea`. A pipeline step
+whose module is not part of the checkout is skipped with a message.
 
-**Markets.** Every market is declared once in `configs/markets.yaml` (price source and selector, fallback source,
-time zone, gate closure, publication time, first 15-min delivery day, cache directory); experiment configs only name
-it (`market: de_lu`). Two are declared: DE-LU (SMARD filter 4169, the project market) and Austria (SMARD filter 4170).
-A new market from a supported provider is one YAML entry plus `python -m bess download --market <id>`. A new provider
-is one `PriceSource` subclass in `src/bess/input/sources/`; ENTSO-E is declared there and raises until its parser
-exists. Markets outside the Europe/Berlin day or with non-German holiday features are rejected with an explicit error
-until the calendar and the forecast features are made per market.
+**Method codes** of `backtest chain --methods` (file names use the same codes):
+
+| Code | Method |
+|:--|:--|
+| `pf` | perfect foresight, end of day fixed at 50 % (reference) |
+| `b0` | daily MILP, end of day fixed at 50 % |
+| `b1` | daily MILP, end of day free and not valued |
+| `b2` | daily MILP, end-of-day energy valued at a constant EUR/MWh chosen on validation |
+| `b4` | rolling 48 h MILP (plans D and D+1, executes D) |
+| `b3` | MILP + one-step value (gamma = 0) - needs `train fqi` |
+| `m1` | MILP + FQI value, the main method - needs `train fqi` |
+| `m2` | FQI picks the end level, the MILP plans to it - needs `train fqi` |
+
+`b3`, `m1` and `m2` on the validation period are produced by `train fqi` itself (models fitted on 2021-2024); on the
+test and acceptance periods they use the models refitted on 2021-2025.
+
+**Make targets**: `make test`, `make data`, `make v2-cache`, `make v2` (both take `V2_CONFIG=v2_isea.yaml`),
+`make isea`, `make isea-fetch`.
+
+### Configuration
+
+| File | Content |
+|:--|:--|
+| `configs/markets.yaml` | market registry: price source and selector, fallback source, time zone, gate closure, publication time, first 15-min delivery day, download start, cache directory |
+| `configs/experiment.yaml` | base experiment config: market (`de_lu`), data splits of the single XGB model, results and models directories |
+| `configs/experiment_at.yaml` | the same for the Austrian market (cache `data/at`, results `results/at`) |
+| `configs/v2.yaml`, `configs/v2_isea.yaml` | battery profiles of the learned-value experiment: periods (cache, train, validation, test, acceptance), battery file, shared forecaster, cache / results / models directories, ISEA reference series |
+| `configs/battery.yaml` | project battery: 1 MW / 2 MWh, 90 % round trip, SoC 10-90 %, 10 EUR/MWh degradation |
+| `configs/battery_isea.yaml` | ISEA index battery: 1 MW / 2 MWh, 95 % each way, SoC 0-100 %, 2 cycles per day on stored energy |
+| `configs/isea_reference.yaml` | published ISEA and Electricity Maps values used by `benchmark public` |
+| `configs/isea_monthly.csv`, `configs/isea_daily.csv` | ISEA dashboard values (`isea fetch`) |
+
+**Markets.** Experiment configs name a market (`market: de_lu`); everything else about it is in
+`configs/markets.yaml`. Two are declared: DE-LU (SMARD filter 4169, the project market) and Austria (SMARD filter
+4170). A new market from a supported provider is one YAML entry plus `python -m bess download --market <id>`. A new
+provider is one `PriceSource` subclass in `src/bess/input/sources/` (ENTSO-E is declared there and raises until its
+parser exists). Markets outside the Europe/Berlin day or with non-German holiday features are rejected with an
+explicit error until the calendar and the forecast features are made per market.
 
 **Multi-market forecasting (interface only).** `bess.input.markets.load_inputs(target, as_of_utc, exogenous=[...])`
 returns the information set of several markets at one decision instant, each cut with its own publication rule;
@@ -401,20 +489,86 @@ returns the information set of several markets at one decision instant, each cut
 forecasters run through `SingleMarketAdapter`, which gives identical forecasts and refuses exogenous markets. No result
 in this README uses other markets yet.
 
-## Reproduce
+### File structure
 
-```bash
-conda create -n BESS python=3.12 -y && conda activate BESS
-pip install -e ".[dev]"
+The package follows the five modules of the scheme on a small shared core; the library code of each module imports
+only from the modules listed before it (the FQI training command also uses the backtester of `output` to select its
+settings).
 
-python -m bess                     # list all commands
-make test                          # unit tests (synthetic data; real-data checks run once data is downloaded)
-make data                          # python -m bess download: prices, gaps filled after an overlap check
-make v2-cache                      # python -m bess cache reward: forward-fold XGB + reward cache (174k MILPs, ~20 min)
-make v2                            # python -m bess pipeline v2: baselines, FQI selection, test, tables, figures
-make v2-cache v2 V2_CONFIG=v2_isea.yaml   # the headline ISEA-battery profile
-make isea                          # ISEA index: perfect-foresight reconciliation (monthly and daily), comparison figure
+```text
+.
+├── README.md, LICENSE, Makefile, pyproject.toml
+├── configs/                      configuration (see Configuration)
+├── src/bess/
+│   ├── __main__.py               `python -m bess`
+│   ├── cli.py                    command table, pipelines, dispatch to main(argv) of each module
+│   ├── core/                     shared kernel
+│   │   ├── config.py             YAML loading, Battery, paths, battery-profile helpers
+│   │   ├── calendar.py           delivery days in Europe/Berlin (DST), gate closure and publication times
+│   │   ├── contracts.py          DayContext, Schedule, Plan, Policy (interfaces between the modules)
+│   │   └── markets/              market rules: base.py (Market), day_ahead.py, fcr.py (interface only)
+│   ├── input/                    (1) input
+│   │   ├── markets.py            market registry (MarketSpec), load_inputs for several markets
+│   │   ├── sources/              price sources: base.py (PriceSource), smard.py, energy_charts.py, entsoe.py (declared)
+│   │   ├── prices.py             PriceSeries, MarketData, information set at a decision time, data report
+│   │   ├── periods.py            evaluable delivery days of a period, at native resolution
+│   │   ├── download.py           command `download`
+│   │   └── isea.py               command `isea fetch`
+│   ├── forecasting/              (2) forecasting
+│   │   ├── base.py               Forecaster interface, look-ahead guard
+│   │   ├── naive.py, xgb.py      seasonal naive, XGBoost (single model)
+│   │   ├── forward_fold.py       forward-chaining XGBoost (one model per year)
+│   │   ├── multimarket.py        MarketForecaster interface, SingleMarketAdapter
+│   │   ├── train.py              command `train xgb`
+│   │   └── predict.py            command `forecast`
+│   ├── rl/value/                 (3) reinforcement learning (offline, fitted Q iteration)
+│   │   ├── features.py           gate-closure state features
+│   │   ├── cache.py              reward cache of (start, end) SoC MILPs
+│   │   ├── fqi.py                fitted Q iteration, value projection
+│   │   ├── policy.py             MILP policies with the learned value
+│   │   ├── build_cache.py        command `cache reward`
+│   │   └── train.py              command `train fqi`
+│   ├── milp/                     (4) MILP scheduling
+│   │   ├── model.py              battery MILP (HiGHS), terminal values, cycle limits
+│   │   ├── policy.py             perfect foresight, forecast-based daily MILP
+│   │   └── rolling.py            rolling 48 h MILP
+│   └── output/                   (5) output
+│       ├── backtest/             engine.py (one day, settlement), chain.py (SoC carried across days)
+│       ├── metrics.py, io.py     per-day metrics, reading result files
+│       ├── benchmark.py          block bootstrap, ranking with intervals
+│       ├── run_chain.py          command `backtest chain`
+│       ├── v2_summary.py         command `benchmark v2`
+│       ├── public_benchmarks.py  command `benchmark public`
+│       ├── headroom.py           command `benchmark headroom`
+│       └── figures/              v2.py (`figures v2`), isea.py (`figures isea`)
+├── tests/                        unit tests (see Tests)
+├── docs/diagrams/                scheme and timing diagrams (HTML sources, SVG, generator build_diagrams.py)
+└── results/                      committed summaries and figures (see below)
 ```
+
+### Data, models and results
+
+| Location | Content | In git |
+|:--|:--|:--|
+| `data/` | price caches (`prices_hour.parquet`, `prices_quarterhour.parquet`, raw downloads), reward caches (`data/v2/`, `data/v2_isea/`) | no (regenerable) |
+| `models/` | forecasters (`models/v2/xgb_forward_fold.pkl`, `models/xgb.pkl`) and FQI models (`models/v2*/fqi_*.pkl`) | no (regenerable) |
+| `results/v2/`, `results/v2_isea/` | summaries, paired differences, ISEA shares, grids and choices; `daily/` per-day files | summaries yes, `daily/` no |
+| `results/public_benchmarks/` | ISEA and Electricity Maps reconciliation | the matched CSVs |
+| `results/figures/` | figures of this README | yes |
+| `results/forecasts/`, `results/data_report.json` | forecasts of `bess forecast`, data quality report | no |
+
+Per-day result files have one row per delivery day: revenue, degradation cost, net revenue, charged and discharged
+energy, equivalent full cycles, constraint violations, start and end energy, solve and wall time, chain start / end
+flags, the terminal valuation and the mean price of the period (`net_adj_eur` = net revenue including the terminal
+valuation, the quantity all tables use).
+
+### Tests
+
+`make test` (or `python -m pytest`) runs the unit tests on synthetic data: no look-ahead (`test_no_lookahead.py`),
+DST days (`test_dst.py`), MILP feasibility and optimality (`test_milp_feasibility.py`), reward cache, features and
+chained backtest (`test_rlvalue.py`), benchmark statistics (`test_benchmark.py`), CLI, market registry and multi-market
+interface (`test_cli_markets.py`), price gap filling (`test_price_fill.py`). Checks on real prices run once
+`python -m bess download` has been run and are skipped otherwise.
 
 ## Data and licence
 

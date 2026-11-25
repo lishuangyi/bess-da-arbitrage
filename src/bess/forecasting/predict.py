@@ -25,7 +25,11 @@ from bess.input.prices import load_market_data
 def forecast_day(v2: dict, base: dict, day: dt.date, model_path: Path | None = None) -> pl.DataFrame:
     spec = resolve_market(base)
     data = load_market_data(spec)
-    fc = ForwardFoldXGB.load(model_path or forecaster_path(v2))
+    path = model_path or forecaster_path(v2)
+    if not Path(path).exists():
+        raise SystemExit(f"{path} missing - fit it with `python -m bess train xgb` "
+                         "(or `python -m bess cache reward`, which fits it if missing)")
+    fc = ForwardFoldXGB.load(path)
     res = "quarterhour" if day >= spec.qh_start_date else "hour"
     info = data.known_at(spec.gate_closure_utc(day), spec.publication_local)
     try:

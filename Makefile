@@ -3,7 +3,7 @@
 PYTHON ?= python
 BESS = $(PYTHON) -m bess
 
-.PHONY: test data v2-cache v2 isea isea-fetch diagrams
+.PHONY: test data v2-cache v2 isea isea-fetch
 
 test:
 	$(PYTHON) -m pytest
@@ -25,11 +25,4 @@ isea:                                ## ISEA Battery Revenue Index: perfect-fore
 isea-fetch:                          ## refresh configs/isea_monthly.csv and isea_daily.csv from the ISEA dashboard (network)
 	$(BESS) isea fetch
 	$(BESS) isea fetch --daily
-
-DIAGRAM_SKILL ?= $(HOME)/.claude/plugins/cache/diagram-design/diagram-design/2.6.164/skills/diagram-design
-
-diagrams:                            ## diagram-design sources -> docs/diagrams/*.svg (system fonts)
-	$(PYTHON) docs/diagrams/build_diagrams.py
-	for f in timing timing-dark scheme scheme-dark scheme-zh scheme-zh-dark; do \
-	  python3 $(DIAGRAM_SKILL)/scripts/export_svg.py docs/diagrams/$$f.html docs/diagrams/$$f.svg --system-fonts; done
 

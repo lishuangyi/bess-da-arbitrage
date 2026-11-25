@@ -6,10 +6,10 @@ Usage:
 
 Methods (all on the forward-chaining XGB forecasts, models/v2/xgb_forward_fold.pkl):
   pf  perfect foresight, end of day fixed at 50 % (reference; an upper bound only for fixed-50 % strategies)
-  b0  daily MILP, end of day fixed at 50 % (v1 E2 with forward-fold forecasts)
+  b0  daily MILP, end of day fixed at 50 %
   b1  daily MILP, end of day free and not valued (lower reference: tends to empty the battery)
   b2  daily MILP, end-of-day energy valued at a constant EUR/MWh, tuned on the validation period
-  b4  rolling 48 h MILP (v1 E3 with forward-fold forecasts)
+  b4  rolling 48 h MILP (plans D and D+1, executes D)
   b3, m1, m2  learned-value policies (test / acceptance; models from bess train fqi, seeds 0-2):
       b3 = MILP + one-step value (gamma = 0), m1 = MILP + learned multi-step value, m2 = Q picks the end level
 Writes <results_dir>/daily/V2__<method>__<period>.csv, <results_dir>/b2_grid.csv (validation) and
